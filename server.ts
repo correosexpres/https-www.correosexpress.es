@@ -8,38 +8,54 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-const UPLOADS_FILE = path.join(process.cwd(), 'uploads.json');
-const SHIPMENTS_FILE = path.join(process.cwd(), 'shipments.json');
+const isVercel = process.env.VERCEL === '1';
+const DATA_DIR = isVercel ? '/tmp' : process.cwd();
 
-// Ensure files exist
-if (!fs.existsSync(UPLOADS_FILE)) fs.writeFileSync(UPLOADS_FILE, '[]');
-if (!fs.existsSync(SHIPMENTS_FILE)) {
-  const defaultShipments = [
-    {
-      id: "1",
-      trackingNumber: "6635471299413458",
-      name: "Nicola Tella",
-      postalCode: "50001, Zaragoza",
-      address: "Ps. Independencia 33, 50001, Zaragoza",
-      contact: "+34 614 11 39 38",
-      packageVerified: "Cable USB",
-      beneficiary: "5728",
-      concept: "Pago 5728",
-      ibanLabel: "IBAN BANCO (BBVA)",
-      ibanValue: "ES74 0182 2647 5902 0168 2392",
-      shippingCost: "14,58€ (PAGADO)",
-      packageCost: "4,00€",
-      totalAmount: "4,00€",
-      status: "pending",
-      badge: "EN TRÁNSITO"
+const UPLOADS_FILE = path.join(DATA_DIR, 'uploads.json');
+const SHIPMENTS_FILE = path.join(DATA_DIR, 'shipments.json');
+
+// Ensure files exist helper
+const ensureFiles = () => {
+  try {
+    if (!fs.existsSync(UPLOADS_FILE)) {
+      fs.writeFileSync(UPLOADS_FILE, '[]');
     }
-  ];
-  fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments));
-}
+    if (!fs.existsSync(SHIPMENTS_FILE)) {
+      const defaultShipments = [
+        {
+          id: "1",
+          trackingNumber: "6635471299413458",
+          name: "Nicola Tella",
+          postalCode: "50001, Zaragoza",
+          address: "Ps. Independencia 33, 50001, Zaragoza",
+          contact: "+34 614 11 39 38",
+          packageVerified: "Cable USB",
+          beneficiary: "5728",
+          concept: "Pago 5728",
+          ibanLabel: "IBAN BANCO (BBVA)",
+          ibanValue: "ES74 0182 2647 5902 0168 2392",
+          shippingCost: "14,58€ (PAGADO)",
+          packageCost: "4,00€",
+          totalAmount: "4,00€",
+          status: "pending",
+          badge: "EN TRÁNSITO"
+        }
+      ];
+      fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments));
+    }
+  } catch (err) {
+    console.error("Warning: Could not initialize data files in", DATA_DIR, err);
+  }
+};
+
+ensureFiles();
 
 // API Routes
 app.get('/api/shipment', (req, res) => {
   try {
+    if (!fs.existsSync(SHIPMENTS_FILE)) {
+      ensureFiles();
+    }
     const data = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
     res.json(JSON.parse(data));
   } catch (e) {
@@ -52,6 +68,9 @@ app.post('/api/uploads', (req, res) => {
   if (!image) return res.status(400).json({ error: "Missing image" });
   
   try {
+    if (!fs.existsSync(UPLOADS_FILE)) {
+      ensureFiles();
+    }
     const data = fs.readFileSync(UPLOADS_FILE, 'utf-8');
     const uploads = JSON.parse(data);
     const newUpload = {
@@ -64,6 +83,7 @@ app.post('/api/uploads', (req, res) => {
     fs.writeFileSync(UPLOADS_FILE, JSON.stringify(uploads));
     res.json({ success: true });
   } catch (e) {
+    console.error("Upload error:", e);
     res.status(500).json({ error: "Failed to save upload" });
   }
 });
@@ -76,6 +96,7 @@ app.post('/api/admin/login', (req, res) => {
   if (password === ADMIN_PASSWORD) {
     res.json({ success: true, token: "admin-token-123" });
   } else {
+    console.log("Login failed for password:", password);
     res.status(401).json({ success: false, error: "Contraseña incorrecta" });
   }
 });
@@ -150,7 +171,8 @@ app.post('/api/admin/shipment/reset', adminAuth, (req, res) => {
   }
 });
 
-async function startServer() {
+// Vite middleware for development
+const setupMiddleware = async () => {
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
@@ -160,21 +182,32 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+    }
+    // Note: We don't need the fallback here if Vercel handles it via rewrites,
+    // but it doesn't hurt for other environments.
+    app.get('*', (req, res, next) => {
+      // If it starts with /api, don't serve index.html
+      if (req.path.startsWith('/api')) return next();
+      
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        next();
+      }
     });
   }
+};
 
-  if (process.env.VERCEL) {
-    console.log("Running in Vercel environment");
-  } else {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  }
+// We don't await this because on Vercel the file serving is handled by Vercel
+// and we only care about the API routes which are already defined above.
+if (!process.env.VERCEL) {
+  setupMiddleware();
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 }
-
-startServer();
 
 export default app;
