@@ -50,13 +50,22 @@ ensureFiles();
 
 // API Routes
 app.get('/api/shipment', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     if (!fs.existsSync(SHIPMENTS_FILE)) {
       ensureFiles();
     }
     const data = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
+    if (!data || data.trim() === '') {
+       ensureFiles();
+       const freshData = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
+       return res.json(JSON.parse(freshData));
+    }
     res.json(JSON.parse(data));
   } catch (e) {
+    console.error("Read shipment error:", e);
     res.status(500).json({ error: "Failed to read shipments" });
   }
 });
@@ -150,9 +159,13 @@ app.delete('/api/admin/uploads/:id', adminAuth, (req, res) => {
 app.post('/api/admin/shipment', adminAuth, (req, res) => {
   try {
     const shipments = req.body;
-    fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(shipments));
+    if (!Array.isArray(shipments)) {
+      return res.status(400).json({ error: "Invalid data format" });
+    }
+    fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(shipments, null, 2));
     res.json({ success: true });
   } catch (e) {
+    console.error("Admin save error:", e);
     res.status(500).json({ error: "Failed to save shipments" });
   }
 });
