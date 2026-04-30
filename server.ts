@@ -21,27 +21,25 @@ const ensureFiles = () => {
       fs.writeFileSync(UPLOADS_FILE, '[]');
     }
     if (!fs.existsSync(SHIPMENTS_FILE)) {
-      const defaultShipments = [
-        {
-          id: "1",
-          trackingNumber: "6635471299413458",
-          name: "Nicola Tella",
-          postalCode: "50001, Zaragoza",
-          address: "Ps. Independencia 33, 50001, Zaragoza",
-          contact: "+34 614 11 39 38",
-          packageVerified: "Cable USB",
-          beneficiary: "5728",
-          concept: "Pago 5728",
-          ibanLabel: "IBAN BANCO (BBVA)",
-          ibanValue: "ES74 0182 2647 5902 0168 2392",
-          shippingCost: "14,58€ (PAGADO)",
-          packageCost: "4,00€",
-          totalAmount: "4,00€",
-          status: "pending",
-          badge: "EN TRÁNSITO"
-        }
-      ];
-      fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments));
+      const defaultShipments = Array.from({ length: 6 }, (_, i) => ({
+        id: (i + 1).toString(),
+        trackingNumber: i === 0 ? "6635471299413458" : `663547129941300${i}`,
+        name: i === 0 ? "Nicola Tella" : `Cliente Ejemplo ${i + 1}`,
+        postalCode: "50001, Zaragoza",
+        address: "Ps. Independencia 33, 50001, Zaragoza",
+        contact: "+34 614 11 39 38",
+        packageVerified: "Paquete Estándar",
+        beneficiary: "5000",
+        concept: "Envío Programado",
+        ibanLabel: "IBAN",
+        ibanValue: "ES00 0000 0000 0000 0000 0000",
+        shippingCost: "14,50€",
+        packageCost: "0,00€",
+        totalAmount: "14,50€",
+        status: "pending",
+        badge: "EN TRÁNSITO"
+      }));
+      fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments, null, 2));
     }
   } catch (err) {
     console.error("Warning: Could not initialize data files in", DATA_DIR, err);
@@ -60,6 +58,23 @@ app.get('/api/shipment', (req, res) => {
     res.json(JSON.parse(data));
   } catch (e) {
     res.status(500).json({ error: "Failed to read shipments" });
+  }
+});
+
+app.post('/api/shipment/update', (req, res) => {
+  const { id, ...updates } = req.body;
+  try {
+    const data = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
+    const shipments = JSON.parse(data);
+    const index = shipments.findIndex((s: { id: string }) => s.id === id);
+    if (index !== -1) {
+      shipments[index] = { ...shipments[index], ...updates };
+      fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(shipments, null, 2));
+      return res.json({ success: true });
+    }
+    res.status(404).json({ error: "Shipment not found" });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to update shipment" });
   }
 });
 
@@ -143,28 +158,26 @@ app.post('/api/admin/shipment', adminAuth, (req, res) => {
 });
 
 app.post('/api/admin/shipment/reset', adminAuth, (req, res) => {
-  const defaultShipments = [
-    {
-      id: "1",
-      trackingNumber: "6635471299413458",
-      name: "Nicola Tella",
-      postalCode: "50001, Zaragoza",
-      address: "Ps. Independencia 33, 50001, Zaragoza",
-      contact: "+34 614 11 39 38",
-      packageVerified: "Cable USB",
-      beneficiary: "5728",
-      concept: "Pago 5728",
-      ibanLabel: "IBAN BANCO (BBVA)",
-      ibanValue: "ES74 0182 2647 5902 0168 2392",
-      shippingCost: "14,58€ (PAGADO)",
-      packageCost: "4,00€",
-      totalAmount: "4,00€",
-      status: "pending",
-      badge: "EN TRÁNSITO"
-    }
-  ];
+  const defaultShipments = Array.from({ length: 6 }, (_, i) => ({
+    id: (i + 1).toString(),
+    trackingNumber: i === 0 ? "6635471299413458" : `663547129941300${i}`,
+    name: i === 0 ? "Nicola Tella" : `Cliente Ejemplo ${i + 1}`,
+    postalCode: "50001, Zaragoza",
+    address: "Ps. Independencia 33, 50001, Zaragoza",
+    contact: "+34 614 11 39 38",
+    packageVerified: "Paquete Estándar",
+    beneficiary: "5000",
+    concept: "Envío Programado",
+    ibanLabel: "IBAN",
+    ibanValue: "ES00 0000 0000 0000 0000 0000",
+    shippingCost: "14,50€",
+    packageCost: "0,00€",
+    totalAmount: "14,50€",
+    status: "pending",
+    badge: "EN TRÁNSITO"
+  }));
   try {
-    fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments));
+    fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments, null, 2));
     res.json({ success: true, data: defaultShipments });
   } catch (e) {
     res.status(500).json({ error: "Failed to reset shipments" });
