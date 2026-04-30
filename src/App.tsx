@@ -68,9 +68,11 @@ export default function App() {
     try {
       // Fetch latest shipments
       const shipRes = await fetch(`/api/shipment?t=${Date.now()}`, { cache: 'no-store' });
+      if (!shipRes.ok) {
+        throw new Error(`Server returned ${shipRes.status}`);
+      }
       const shipments = await shipRes.json();
       const shipmentsArray = Array.isArray(shipments) ? shipments : [shipments];
-      setAllShipments(shipmentsArray);
 
       setTimeout(() => {
         setIsSearching(false);
