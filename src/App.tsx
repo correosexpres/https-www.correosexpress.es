@@ -85,20 +85,21 @@ export default function App() {
 
       setTimeout(() => {
         setIsSearching(false);
-        const found = shipmentsArray.find((s: Shipment) => s.trackingNumber === inputValue);
+        const found = shipmentsArray.find((s: Shipment) => s.trackingNumber.trim() === inputValue.trim());
         
         if (found) {
           setShipmentData(found);
           setTrackingStatus(found.status || 'pending');
           setShowResults(true);
           setTimeout(() => {
-            document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
+            const el = document.getElementById('results-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
           }, 100);
         } else {
           setError("Número de seguimiento no encontrado. Por favor, verifique e intente de nuevo.");
           setShowResults(false);
         }
-      }, 1000);
+      }, 800);
     } catch (err) {
       console.error("Error during search", err);
       setIsSearching(false);
