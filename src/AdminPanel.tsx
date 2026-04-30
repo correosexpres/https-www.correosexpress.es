@@ -23,7 +23,13 @@ export default function AdminPanel() {
         }
       });
       const data = await res.json();
-      const arrayData = Array.isArray(data) ? data : (data ? [data] : []);
+      let arrayData = Array.isArray(data) ? data : (data ? [data] : []);
+      
+      // Critical check: if we have less than 6, we should probably trigger a refresh after the server auto-repairs it
+      if (arrayData.length < 6) {
+        console.warn("Got less than 6 shipments, server should repair on next call.");
+      }
+      
       setShipments(arrayData);
       // Ensure we have at least 1 tab selected if data exists
       if (arrayData.length > 0 && activeTab >= arrayData.length) {
@@ -530,9 +536,3 @@ export default function AdminPanel() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
