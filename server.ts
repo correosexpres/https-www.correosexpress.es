@@ -8,8 +8,8 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-const isVercel = process.env.VERCEL === '1';
-const DATA_DIR = isVercel ? '/tmp' : process.cwd();
+// No longer using /tmp for local development to ensure persistence
+const DATA_DIR = process.cwd();
 
 const UPLOADS_FILE = path.join(DATA_DIR, 'uploads.json');
 const SHIPMENTS_FILE = path.join(DATA_DIR, 'shipments.json');
@@ -18,9 +18,11 @@ const SHIPMENTS_FILE = path.join(DATA_DIR, 'shipments.json');
 const ensureFiles = () => {
   try {
     if (!fs.existsSync(UPLOADS_FILE)) {
+      console.log("Initializing uploads file...");
       fs.writeFileSync(UPLOADS_FILE, '[]');
     }
     if (!fs.existsSync(SHIPMENTS_FILE)) {
+      console.log("Initializing shipments file...");
       const defaultShipments = Array.from({ length: 6 }, (_, i) => ({
         id: (i + 1).toString(),
         trackingNumber: i === 0 ? "6635471299413458" : `663547129941300${i}`,
@@ -42,7 +44,7 @@ const ensureFiles = () => {
       fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments, null, 2));
     }
   } catch (err) {
-    console.error("Warning: Could not initialize data files in", DATA_DIR, err);
+    console.error("Critical: Could not initialize data files in", DATA_DIR, err);
   }
 };
 
