@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+*.log
+uploads.json
+shipments.json
+shipment.json
+status.json
+uploads/
