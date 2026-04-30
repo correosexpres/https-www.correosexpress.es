@@ -89,15 +89,15 @@ app.post('/api/uploads', (req, res) => {
 });
 
 // Admin API
-const ADMIN_PASSWORD = "admin"; // Basic password
+const ADMIN_PASSWORD = "192021"; // User requested password
 
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body;
   if (password === ADMIN_PASSWORD) {
-    res.json({ success: true, token: "admin-token-123" });
+    return res.json({ success: true, token: "admin-token-123" });
   } else {
     console.log("Login failed for password:", password);
-    res.status(401).json({ success: false, error: "Contraseña incorrecta" });
+    return res.status(401).json({ success: false, error: "Contraseña incorrecta" });
   }
 });
 
