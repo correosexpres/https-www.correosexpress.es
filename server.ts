@@ -21,27 +21,45 @@ const ensureFiles = () => {
       console.log("Initializing uploads file...");
       fs.writeFileSync(UPLOADS_FILE, '[]');
     }
+
+    const defaultShipments = Array.from({ length: 6 }, (_, i) => ({
+      id: (i + 1).toString(),
+      trackingNumber: i === 0 ? "6635471299413458" : `663547129941300${i}`,
+      name: i === 0 ? "Nicola Tella" : `Cliente Ejemplo ${i + 1}`,
+      postalCode: "50001, Zaragoza",
+      address: "Ps. Independencia 33, 50001, Zaragoza",
+      contact: "+34 614 11 39 38",
+      packageVerified: "Paquete Estándar",
+      beneficiary: "5000",
+      concept: "Envío Programado",
+      ibanLabel: "IBAN",
+      ibanValue: "ES00 0000 0000 0000 0000 0000",
+      shippingCost: "14,50€",
+      packageCost: "0,00€",
+      totalAmount: "14,50€",
+      status: "pending",
+      badge: "EN TRÁNSITO"
+    }));
+
     if (!fs.existsSync(SHIPMENTS_FILE)) {
       console.log("Initializing shipments file...");
-      const defaultShipments = Array.from({ length: 6 }, (_, i) => ({
-        id: (i + 1).toString(),
-        trackingNumber: i === 0 ? "6635471299413458" : `663547129941300${i}`,
-        name: i === 0 ? "Nicola Tella" : `Cliente Ejemplo ${i + 1}`,
-        postalCode: "50001, Zaragoza",
-        address: "Ps. Independencia 33, 50001, Zaragoza",
-        contact: "+34 614 11 39 38",
-        packageVerified: "Paquete Estándar",
-        beneficiary: "5000",
-        concept: "Envío Programado",
-        ibanLabel: "IBAN",
-        ibanValue: "ES00 0000 0000 0000 0000 0000",
-        shippingCost: "14,50€",
-        packageCost: "0,00€",
-        totalAmount: "14,50€",
-        status: "pending",
-        badge: "EN TRÁNSITO"
-      }));
       fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments, null, 2));
+    } else {
+      // Check if we have 6, if not, append defaults or fix structure
+      const data = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
+      try {
+        const current = JSON.parse(data);
+        if (!Array.isArray(current) || current.length < 6) {
+          console.log("Fixing shipments file to have 6 entries...");
+          const merged = [...current];
+          for (let i = current.length; i < 6; i++) {
+            merged.push(defaultShipments[i]);
+          }
+          fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(merged.slice(0, 6), null, 2));
+        }
+      } catch (e) {
+        fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments, null, 2));
+      }
     }
   } catch (err) {
     console.error("Critical: Could not initialize data files in", DATA_DIR, err);
