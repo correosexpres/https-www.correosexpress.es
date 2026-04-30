@@ -35,9 +35,12 @@ export default function AdminPanel() {
     setUploads([]);
   }, []);
 
-  const fetchUploads = React.useCallback(async (token: string) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchUploads = React.useCallback(async (token: string, silent = false) => {
+    if (!silent) setIsRefreshing(true);
     try {
-      const res = await fetch('/api/admin/uploads', {
+      const res = await fetch(`/api/admin/uploads?nc=${Date.now()}`, {
         headers: {
           'Authorization': token,
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -53,9 +56,23 @@ export default function AdminPanel() {
         handleLogout();
       }
     } catch (err) {
-      console.error(err);
+      console.error("Fetch uploads error:", err);
+    } finally {
+      if (!silent) setIsRefreshing(false);
     }
   }, [handleLogout]);
+
+  // Auto refresh uploads every 15 seconds
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (!isLoggedIn || !token) return;
+
+    const interval = setInterval(() => {
+      fetchUploads(token, true);
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn, fetchUploads]);
 
   useEffect(() => {
     document.title = "Panel de Administración - Envío Rápido y Seguro";
@@ -437,14 +454,35 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {uploads.length === 0 ? (
+        <div className="flex justify-between items-center mb-6 mt-8">
+          <h2 className="text-xl font-bold text-[#1e3a6e] flex items-center gap-2">
+            <ImageIcon className="text-[#f5c000]" />
+            Comprobantes para: {shipments[activeTab]?.trackingNumber}
+          </h2>
+          <button 
+            onClick={() => fetchUploads(localStorage.getItem('adminToken') || '')}
+            disabled={isRefreshing}
+            className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-bold transition-all ${isRefreshing ? 'bg-gray-200 text-gray-400' : 'bg-[#f5c000] text-[#1e3a6e] hover:bg-[#e0ad00]'}`}
+          >
+            <div className={isRefreshing ? 'animate-spin' : ''}>
+              <Hash size={16} />
+            </div>
+            {isRefreshing ? 'Actualizando...' : 'Refrescar Comprobantes'}
+          </button>
+        </div>
+
+        {uploads.filter(u => u.trackingNumber === shipments[activeTab]?.trackingNumber).length === 0 ? (
           <div className="bg-white p-12 rounded-lg shadow text-center text-gray-500">
             <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
-            <p className="text-lg">No hay comprobantes subidos aún.</p>
+            <p className="text-lg">No hay comprobantes para este envío.</p>
+            <p className="text-xs mt-2">Pide al cliente que suba el comprobante usando el código {shipments[activeTab]?.trackingNumber}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {uploads.map((upload) => (
+            {uploads
+              .filter(u => u.trackingNumber === shipments[activeTab]?.trackingNumber)
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map((upload) => (
               <div key={upload.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
                 <div className="bg-gray-50 p-4 border-b border-gray-200 flex justify-between items-center">
                   <div className="flex items-center gap-2 text-sm font-bold text-[#1e3a6e]">
