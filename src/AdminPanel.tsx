@@ -14,7 +14,14 @@ export default function AdminPanel() {
 
   const fetchShipmentData = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/shipment?t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/shipment?nc=${Date.now()}`, { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       const data = await res.json();
       setShipments(Array.isArray(data) ? data : [data]);
     } catch (err) {
@@ -81,15 +88,14 @@ export default function AdminPanel() {
         body: JSON.stringify(shipments)
       });
       
+      const data = await res.json();
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Error en la respuesta del servidor');
+        throw new Error(data.error || 'Error en la respuesta del servidor');
       }
       
       alert('Todos los datos guardados correctamente');
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // No reload needed if we just refresh the data
+      fetchShipmentData();
     } catch (err: unknown) {
       console.error('Save error:', err);
       alert('Error al guardar los datos: ' + (err instanceof Error ? err.message : 'Unknown error'));
