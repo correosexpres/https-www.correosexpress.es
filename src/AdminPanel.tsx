@@ -51,6 +51,7 @@ export default function AdminPanel() {
   }, [handleLogout]);
 
   useEffect(() => {
+    document.title = "Panel de Administración - Envío Rápido y Seguro";
     const token = localStorage.getItem('adminToken');
     if (token) {
       setIsLoggedIn(true);
