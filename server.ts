@@ -45,19 +45,20 @@ const ensureFiles = () => {
       console.log("Initializing shipments file...");
       fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments, null, 2));
     } else {
-      // Check if we have 6, if not, append defaults or fix structure
-      const data = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
       try {
+        const data = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
         const current = JSON.parse(data);
         if (!Array.isArray(current) || current.length < 6) {
-          console.log("Fixing shipments file to have 6 entries...");
-          const merged = [...current];
-          for (let i = current.length; i < 6; i++) {
+          console.log("Fixing shipments file: current data is not 6 entries array. Resetting...");
+          const merged = Array.isArray(current) ? [...current] : [];
+          // Fill missing to reach 6
+          for (let i = merged.length; i < 6; i++) {
             merged.push(defaultShipments[i]);
           }
           fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(merged.slice(0, 6), null, 2));
         }
       } catch (e) {
+        console.error("Error repairing shipments file, resetting to defaults:", e);
         fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(defaultShipments, null, 2));
       }
     }
@@ -124,7 +125,7 @@ app.post('/api/uploads', (req, res) => {
       date: new Date().toISOString()
     };
     uploads.push(newUpload);
-    fs.writeFileSync(UPLOADS_FILE, JSON.stringify(uploads));
+    fs.writeFileSync(UPLOADS_FILE, JSON.stringify(uploads, null, 2));
     res.json({ success: true });
   } catch (e) {
     console.error("Upload error:", e);
@@ -169,7 +170,7 @@ app.delete('/api/admin/uploads/:id', adminAuth, (req, res) => {
     const data = fs.readFileSync(UPLOADS_FILE, 'utf-8');
     let uploads = JSON.parse(data);
     uploads = uploads.filter(u => u.id !== req.params.id);
-    fs.writeFileSync(UPLOADS_FILE, JSON.stringify(uploads));
+    fs.writeFileSync(UPLOADS_FILE, JSON.stringify(uploads, null, 2));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "Failed to delete upload" });
