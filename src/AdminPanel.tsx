@@ -133,12 +133,15 @@ export default function AdminPanel() {
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ password })
       });
       
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         localStorage.setItem('adminToken', 'Bearer ' + data.token);
         setIsLoggedIn(true);
         fetchUploads('Bearer ' + data.token);
@@ -147,7 +150,8 @@ export default function AdminPanel() {
         setError(data.error || 'Contraseña incorrecta');
       }
     } catch (err) {
-      setError('Error de conexión');
+      console.error("Connection error:", err);
+      setError('Error de conexión con el servidor');
     } finally {
       setLoading(false);
     }
