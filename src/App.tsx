@@ -32,6 +32,7 @@ export default function App() {
 
   // Fetch shipment data on mount
   useEffect(() => {
+    document.title = "Envío Rápido y Seguro a España Y Portugal";
     const fetchShipmentData = async () => {
       try {
         const res = await fetch(`/api/shipment?t=${Date.now()}`, { cache: 'no-store' });
