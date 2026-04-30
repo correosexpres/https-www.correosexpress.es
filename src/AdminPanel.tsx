@@ -23,11 +23,16 @@ export default function AdminPanel() {
         }
       });
       const data = await res.json();
-      setShipments(Array.isArray(data) ? data : [data]);
+      const arrayData = Array.isArray(data) ? data : (data ? [data] : []);
+      setShipments(arrayData);
+      // Ensure we have at least 1 tab selected if data exists
+      if (arrayData.length > 0 && activeTab >= arrayData.length) {
+        setActiveTab(0);
+      }
     } catch (err) {
       console.error(err);
     }
-  }, []);
+  }, [activeTab]);
 
   const handleLogout = React.useCallback(() => {
     localStorage.removeItem('adminToken');
@@ -111,8 +116,11 @@ export default function AdminPanel() {
       }
       
       alert('Todos los datos guardados correctamente');
-      // No reload needed if we just refresh the data
-      fetchShipmentData();
+      
+      // Small delay before refresh to ensure filesystem sync
+      setTimeout(() => {
+        fetchShipmentData();
+      }, 300);
     } catch (err: unknown) {
       console.error('Save error:', err);
       alert('Error al guardar los datos: ' + (err instanceof Error ? err.message : 'Unknown error'));
