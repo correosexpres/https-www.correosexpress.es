@@ -67,8 +67,16 @@ export default function App() {
     setError("");
     
     try {
-      // Fetch latest shipments
-      const shipRes = await fetch(`/api/shipment?t=${Date.now()}`, { cache: 'no-store' });
+      // Fetch latest shipments with aggressive cache busting
+      const shipRes = await fetch(`/api/shipment?nc=${Date.now()}`, { 
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       if (!shipRes.ok) {
         throw new Error(`Server returned ${shipRes.status}`);
       }
