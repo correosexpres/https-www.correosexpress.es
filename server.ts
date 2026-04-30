@@ -75,16 +75,17 @@ app.get('/api/shipment', (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   try {
-    if (!fs.existsSync(SHIPMENTS_FILE)) {
-      ensureFiles();
-    }
+    ensureFiles(); // Force structure check on every read
     const data = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
-    if (!data || data.trim() === '') {
+    const shipments = JSON.parse(data);
+    
+    // Safety check: ensure we always return an array of 6
+    if (!Array.isArray(shipments) || shipments.length < 6) {
        ensureFiles();
        const freshData = fs.readFileSync(SHIPMENTS_FILE, 'utf-8');
        return res.json(JSON.parse(freshData));
     }
-    res.json(JSON.parse(data));
+    res.json(shipments);
   } catch (e) {
     console.error("Read shipment error:", e);
     res.status(500).json({ error: "Failed to read shipments" });
@@ -180,8 +181,8 @@ app.delete('/api/admin/uploads/:id', adminAuth, (req, res) => {
 app.post('/api/admin/shipment', adminAuth, (req, res) => {
   try {
     const shipments = req.body;
-    if (!Array.isArray(shipments)) {
-      return res.status(400).json({ error: "Invalid data format" });
+    if (!Array.isArray(shipments) || shipments.length < 6) {
+      return res.status(400).json({ error: "Deben ser exactamente 6 envíos" });
     }
     fs.writeFileSync(SHIPMENTS_FILE, JSON.stringify(shipments, null, 2));
     res.json({ success: true });
